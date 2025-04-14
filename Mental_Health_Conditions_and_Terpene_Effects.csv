@@ -1,0 +1,10 @@
+Condition,Helpful_Terpenes,Avoid_Terpenes
+Anxiety,"['Linalool', 'Myrcene', 'Caryophyllene']","['THC', 'Terpinolene']"
+Depression,"['Limonene', 'Pinene', 'Caryophyllene']",['Myrcene']
+PTSD,"['Linalool', 'Caryophyllene', 'Myrcene']","['THC', 'Limonene']"
+ADHD,"['Pinene', 'Limonene', 'Terpinolene']","['Linalool', 'Myrcene']"
+Insomnia,"['Myrcene', 'Linalool', 'Terpineol']","['Limonene', 'THC']"
+Bipolar Disorder,"['Caryophyllene', 'Limonene', 'Pinene']","['THC', 'Myrcene']"
+OCD,"['Linalool', 'Caryophyllene', 'Ocimene']","['THC', 'Limonene']"
+Autism Spectrum,"['Limonene', 'Pinene', 'Caryophyllene']","['Myrcene', 'THC']"
+Schizophrenia,"['CBD', 'Limonene', 'Linalool']","['THC', 'Terpinolene']"

@@ -1,0 +1,19 @@
+Condition,Helpful_Terpenes,Avoid_Terpenes,Confidence_Level
+Anxiety,"['Linalool', 'Myrcene', 'Caryophyllene']","['THC', 'Terpinolene']",High
+Depression,"['Limonene', 'Pinene', 'Caryophyllene']",['Myrcene'],High
+PTSD,"['Linalool', 'Caryophyllene', 'Myrcene']","['THC', 'Limonene']",High
+ADHD,"['Pinene', 'Limonene', 'Terpinolene']","['Linalool', 'Myrcene']",Medium
+Insomnia,"['Myrcene', 'Linalool', 'Terpineol']","['Limonene', 'THC']",High
+Bipolar Disorder,"['Caryophyllene', 'Limonene', 'Pinene']","['THC', 'Myrcene']",Medium
+OCD,"['Linalool', 'Caryophyllene', 'Ocimene']","['THC', 'Limonene']",Medium
+Autism Spectrum,"['Limonene', 'Pinene', 'Caryophyllene']","['Myrcene', 'THC']",Medium
+Schizophrenia,"['CBD', 'Limonene', 'Linalool']","['THC', 'Terpinolene']",High
+Chronic Pain,"['Myrcene', 'Caryophyllene', 'Humulene']","['THC', 'Limonene']",High
+Inflammation,"['Caryophyllene', 'Humulene', 'Pinene']",['THC'],High
+Fibromyalgia,"['Myrcene', 'Linalool', 'CBD']","['THC', 'Limonene']",Medium
+Nausea,"['Limonene', 'Caryophyllene', 'Myrcene']","['THC', 'Pinene']",Medium
+Epilepsy,"['CBD', 'Linalool', 'Myrcene']","['THC', 'Limonene']",High
+Multiple Sclerosis,"['Caryophyllene', 'Pinene', 'CBD']","['THC', 'Limonene']",High
+Arthritis,"['Caryophyllene', 'Myrcene', 'Linalool']","['THC', 'Terpinolene']",Medium
+IBD/IBS,"['Caryophyllene', 'Humulene', 'Limonene']","['THC', 'Limonene']",Medium
+Cancer-related symptoms,"['Myrcene', 'Caryophyllene', 'CBD']","['THC', 'Terpinolene']",High
