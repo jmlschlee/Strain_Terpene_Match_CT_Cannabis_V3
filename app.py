@@ -1,98 +1,109 @@
 
 import streamlit as st
 import pandas as pd
+import difflib
 
 @st.cache_data
 def load_data():
-    df_strains = pd.read_csv("final_health_strain_dataset.csv")
+    df_strains = pd.read_csv("normalized_strain_registry.csv")
     df_mental = pd.read_csv("Mental_Health_Conditions_and_Terpene_Effects.csv")
     df_physical = pd.read_csv("Expanded_Condition-Terpene_Mapping_with_Confidence_Levels.csv")
     return df_strains, df_mental, df_physical
 
-def match_conditions(conditions, df_mental, df_physical):
-    terpene_scores = {}
-    condition_sources = []
+def unify_terpene_name(terpene, reference_list):
+    for ref in reference_list:
+        matches = [terpene[i:i+4] for i in range(len(terpene) - 3)]
+        if any(m in ref for m in matches):
+            return ref
+    return terpene
 
-    for cond in conditions:
-        mental_hits = df_mental[df_mental['Condition'].str.contains(cond, case=False, na=False)]
-        physical_hits = df_physical[df_physical['Condition'].str.contains(cond, case=False, na=False)]
+def get_terpene_map(df_map):
+    terp_map = {}
+    for _, row in df_map.iterrows():
+        condition = row["Condition"].strip().lower()
+        terpene = row["Terpene"].strip().lower()
+        confidence = float(row.get("Confidence", 1))
+        if condition not in terp_map:
+            terp_map[condition] = []
+        terp_map[condition].append((terpene, confidence))
+    return terp_map
 
-        for _, row in mental_hits.iterrows():
-            terp = row['Terpene']
-            score = row.get('Confidence', 1)
-            terpene_scores[terp] = terpene_scores.get(terp, 0) + score
-            condition_sources.append((cond, terp, score))
+def analyze_conditions(input_conditions, df_strains, terp_map):
+    terpene_cols = [col.lower() for col in df_strains.columns if col.upper() == col and df_strains[col].dtype != 'O']
+    results = []
 
-        for _, row in physical_hits.iterrows():
-            terp = row['Terpene']
-            score = row.get('Confidence Level', 1)
-            terpene_scores[terp] = terpene_scores.get(terp, 0) + score
-            condition_sources.append((cond, terp, score))
-
-    return terpene_scores, condition_sources
-
-def score_strains(df_strains, terpene_scores):
-    strain_scores = []
-
-    for i, row in df_strains.iterrows():
+    for _, row in df_strains.iterrows():
         score = 0
-        details = []
-        for terp, weight in terpene_scores.items():
-            for col in df_strains.columns:
-                if col.lower().startswith(terp.lower()[:4]) and pd.notna(row[col]):
-                    amount = row[col]
-                    match_score = amount * weight
-                    score += match_score
-                    details.append(f"{terp} ({amount}×{weight})")
-                    break
-        strain_scores.append((row['Strain'], score, details))
+        reasons = []
+        avoid_flag = False
+        for cond in input_conditions:
+            if cond in terp_map:
+                for t_raw, conf in terp_map[cond]:
+                    terp = unify_terpene_name(t_raw, terpene_cols)
+                    amount = row.get(terp.upper(), 0)
+                    if amount > 0:
+                        score += amount * conf
+                        reasons.append(f"✔ {terp.title()} ({amount}) helps with {cond} (confidence {conf})")
+                    elif "anxiety" in cond or "panic" in cond:
+                        avoid_flag = True
+        results.append((row["Strain"], score, reasons, avoid_flag))
+    results.sort(key=lambda x: x[1], reverse=True)
+    return results
 
-    strain_scores = sorted(strain_scores, key=lambda x: x[1], reverse=True)
-    return strain_scores
+def analyze_strain(strain_name, df_strains, terp_map):
+    strain_name = strain_name.lower()
+    match = df_strains[df_strains["Strain"].str.contains(strain_name)]
+    if match.empty:
+        return None, []
+    row = match.iloc[0]
+    terpene_cols = [col.lower() for col in df_strains.columns if col.upper() == col and df_strains[col].dtype != 'O']
+    helpful = []
+    harmful = []
 
-# --- UI ---
-st.title("CT Cannabis Health Strain Matcher")
+    for cond, tlist in terp_map.items():
+        for t_raw, conf in tlist:
+            terp = unify_terpene_name(t_raw, terpene_cols)
+            if row.get(terp.upper(), 0) > 0:
+                helpful.append((cond, terp, row.get(terp.upper(), 0), conf))
+            elif "anxiety" in cond or "panic" in cond:
+                harmful.append((cond, terp))
+
+    return row["Strain"], (helpful, harmful)
+
+# --- Streamlit UI ---
+st.title("CT Strain Health Match Finder")
 
 df_strains, df_mental, df_physical = load_data()
+terp_map = get_terpene_map(pd.concat([df_mental, df_physical]))
 
-tab1, tab2 = st.tabs(["Match by Health Condition", "Reverse Lookup by Strain"])
+mode = st.radio("Choose Mode", ["Find Strains by Conditions", "Analyze Strain for Effects"])
 
-with tab1:
-    user_input = st.text_input("Enter 1-5 conditions (mental or physical), separated by commas:")
-    if user_input:
-        conditions = [c.strip() for c in user_input.split(",")][:5]
-        terpene_scores, logic = match_conditions(conditions, df_mental, df_physical)
-        ranked_strains = score_strains(df_strains, terpene_scores)
+if mode == "Find Strains by Conditions":
+    condition_input = st.text_input("Enter 1–5 conditions (mental or physical), comma-separated").lower()
+    input_conditions = [x.strip() for x in condition_input.split(",") if x.strip()]
+    if input_conditions:
+        results = analyze_conditions(input_conditions, df_strains, terp_map)
+        st.subheader("Top 5 Matches")
+        for name, score, reasons, _ in results[:5]:
+            st.markdown(f"**{name.title()}** – Score: {score:.2f}")
+            for r in reasons:
+                st.write(r)
+            st.markdown("---")
+        st.subheader("⚠️ Strains to Avoid")
+        for name, _, _, avoid in results:
+            if avoid:
+                st.write(f"- {name.title()}")
 
-        if ranked_strains:
-            st.subheader("Top Strain Matches:")
-            for strain, score, reasons in ranked_strains[:10]:
-                st.markdown(f"**{strain}** – Score: {score:.2f}")
-                st.caption("Logic: " + "; ".join(reasons))
-
-            st.subheader("Strains to Avoid (Low or Conflicting Matches):")
-            for strain, score, reasons in ranked_strains[-5:]:
-                st.markdown(f"- {strain} (Score: {score:.2f})")
-
-        with st.expander("How this works"):
-            st.write("Strains are scored by summing weighted terpene matches from condition-terpene confidence levels.")
-
-with tab2:
-    strain_input = st.text_input("Enter strain name for reverse health match:")
-    if strain_input:
-        strain_row = df_strains[df_strains["Strain"].str.contains(strain_input.strip().lower(), na=False)]
-        if not strain_row.empty:
-            terpene_present = {col: strain_row.iloc[0][col] for col in df_strains.columns if col.upper() == col and pd.notna(strain_row.iloc[0][col])}
-            effects = []
-            for terp, amt in terpene_present.items():
-                mental_match = df_mental[df_mental['Terpene'].str.contains(terp, case=False, na=False)]
-                phys_match = df_physical[df_physical['Terpene'].str.contains(terp, case=False, na=False)]
-
-                for _, row in pd.concat([mental_match, phys_match]).iterrows():
-                    effects.append((row['Condition'], terp, row.get('Confidence') or row.get('Confidence Level', 1)))
-
-            st.subheader("Potential Condition Matches:")
-            for condition, terp, conf in effects:
-                st.markdown(f"- **{condition}** (via {terp}, confidence {conf})")
+elif mode == "Analyze Strain for Effects":
+    strain_query = st.text_input("Enter a strain/product name").strip().lower()
+    if strain_query:
+        name, (helpful, harmful) = analyze_strain(strain_query, df_strains, terp_map)
+        if name:
+            st.subheader(f"✅ {name.title()} may help with:")
+            for cond, terp, amt, conf in helpful:
+                st.write(f"- {cond.title()} (via {terp}, {amt} mg, confidence {conf})")
+            st.subheader("⚠️ May worsen:")
+            for cond, terp in harmful:
+                st.write(f"- {cond.title()} (potential interaction with {terp})")
         else:
-            st.warning("Strain not found in dataset.")
+            st.warning("No matching strain found.")
