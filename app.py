@@ -23,7 +23,7 @@ def get_terpene_map(df):
         condition = row["Condition"].strip().lower()
         helps = row.get("Helpful_Terpenes", "")
         avoids = row.get("Avoid_Terpenes", "")
-        conf = float(row.get("Confidence_Level", 1)) if "Confidence_Level" in row else 1
+        conf = float(row["Confidence_Level"]) if "Confidence_Level" in row.index else 1
 
         for terp in str(helps).split(","):
             terp = terp.strip().lower()
