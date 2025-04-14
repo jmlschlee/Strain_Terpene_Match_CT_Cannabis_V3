@@ -17,15 +17,20 @@ def unify_terpene_name(terpene, reference_list):
             return ref
     return terpene
 
-def get_terpene_map(df_map):
+def get_terpene_map(df):
     terp_map = {}
-    for _, row in df_map.iterrows():
+    for _, row in df.iterrows():
         condition = row["Condition"].strip().lower()
-        terpene = row["Terpene"].strip().lower()
-        confidence = float(row.get("Confidence", 1))
-        if condition not in terp_map:
-            terp_map[condition] = []
-        terp_map[condition].append((terpene, confidence))
+        helps = row.get("Helpful_Terpenes", "")
+        avoids = row.get("Avoid_Terpenes", "")
+        conf = float(row.get("Confidence_Level", 1)) if "Confidence_Level" in row else 1
+
+        for terp in str(helps).split(","):
+            terp = terp.strip().lower()
+            if terp:
+                if condition not in terp_map:
+                    terp_map[condition] = []
+                terp_map[condition].append((terp, conf))
     return terp_map
 
 def analyze_conditions(input_conditions, df_strains, terp_map):
